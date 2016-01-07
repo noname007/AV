@@ -100,10 +100,11 @@ int main(int argc, char* argv[])
 	 * 在此处添加输出视频信息的代码
 	 * 取自于pFormatCtx，使用fprintf()
 	 */
-
-	printf("时长：%d\ns",pFormatCtx->duration/1000000);
-	printf("封装格式 %s\n",pFormatCtx->iformat->long_name);
-	printf("宽高 %d*%d\n",pFormatCtx->streams[videoindex]->codec->width,pFormatCtx->streams[videoindex]->codec->height);
+	FILE *fp = fopen("info.txt","wb+");
+	fprintf(fp,"时长：%d\r\n",pFormatCtx->duration/1000000); 
+	fprintf(fp,"封装格式 %s\r\n",pFormatCtx->iformat->long_name);
+	fprintf(fp,"宽高 %d*%d\r\n",pFormatCtx->streams[videoindex]->codec->width,pFormatCtx->streams[videoindex]->codec->height);
+	fclose(fp);
 
    	pFrame=av_frame_alloc();
 	pFrameYUV=av_frame_alloc();
@@ -117,15 +118,20 @@ int main(int argc, char* argv[])
 	img_convert_ctx = sws_getContext(pCodecCtx->width, pCodecCtx->height, pCodecCtx->pix_fmt, 
 		pCodecCtx->width, pCodecCtx->height, PIX_FMT_YUV420P, SWS_BICUBIC, NULL, NULL, NULL); 
 
+
+	FILE * fp264 = fopen("test264.h264","wb+");
+	FILE * fpyuv = fopen("testyuv.yuv","wb+");
+
 	frame_cnt=0;
-	FILE * fl = fopen("out.h264","rw+");
 	while(av_read_frame(pFormatCtx, packet)>=0){
 		if(packet->stream_index==videoindex){
 				/*
 				 * 在此处添加输出H264码流的代码
 				 * 取自于packet，使用fwrite()
 				 */
-			fwrite(packet->data,1,packet->size,fl);
+			//fwrite(packet->data,1,packet->size,fl);
+			//fwrite(packet->data,1024,packet->size/1024,fp264); //may have some question ,result in error displaying not espected
+			fwrite(packet->data,1,packet->size,fp264);
 			ret = avcodec_decode_video2(pCodecCtx, pFrame, &got_picture, packet);
 			if(ret < 0){
 				printf("Decode Error.\n");
@@ -140,13 +146,18 @@ int main(int argc, char* argv[])
 				 * 在此处添加输出YUV的代码
 				 * 取自于pFrameYUV，使用fwrite()
 				 */
-
+				int size = pCodecCtx->width * pCodecCtx->height;
+				fwrite(pFrameYUV->data[0],1,size,fpyuv);
+				fwrite(pFrameYUV->data[1],1,size/4,fpyuv);
+				fwrite(pFrameYUV->data[2],1,size/4,fpyuv);
 				frame_cnt++;
 
 			}
 		}
 		av_free_packet(packet);
 	}
+
+	fclose(fp264);
 
 	sws_freeContext(img_convert_ctx);
 
