@@ -101,10 +101,19 @@ int main(int argc, char* argv[])
 	 * 取自于pFormatCtx，使用fprintf()
 	 */
 	FILE *fp = fopen("info.txt","wb+");
-	fprintf(fp,"时长：%d\r\n",pFormatCtx->duration/1000000); 
-	fprintf(fp,"封装格式 %s\r\n",pFormatCtx->iformat->long_name);
+	fprintf(fp,"时长：av duration: %ds\r\n",pFormatCtx->duration/1000000); 
+	fprintf(fp,"bit rate%d\r\n",pFormatCtx->bit_rate);
+
+	fprintf(fp,"封装格式 avformat: %s\r\n",pFormatCtx->iformat->long_name);
+	fprintf(fp,"file extensions: %s\r\n",pFormatCtx->iformat->extensions);
+	//fprintf(fp,"")
+	fprintf(fp,"frame_rate: %d/%d\r\n",pFormatCtx->streams[videoindex]->r_frame_rate.num,pFormatCtx->streams[videoindex]->r_frame_rate.den);
 	fprintf(fp,"宽高 %d*%d\r\n",pFormatCtx->streams[videoindex]->codec->width,pFormatCtx->streams[videoindex]->codec->height);
-	fclose(fp);
+	
+
+	
+	//fprintf(fp,"bit rate%d\r\n",pFormatCtx->);
+	
 
    	pFrame=av_frame_alloc();
 	pFrameYUV=av_frame_alloc();
@@ -115,6 +124,10 @@ int main(int argc, char* argv[])
 	printf("--------------- File Information ----------------\n");
 	av_dump_format(pFormatCtx,0,filepath,0);
 	printf("-------------------------------------------------\n");
+	
+
+	fprintf(fp,"==========================packet & Frame info==============================================\r\n");
+	
 	img_convert_ctx = sws_getContext(pCodecCtx->width, pCodecCtx->height, pCodecCtx->pix_fmt, 
 		pCodecCtx->width, pCodecCtx->height, PIX_FMT_YUV420P, SWS_BICUBIC, NULL, NULL, NULL); 
 
@@ -122,6 +135,8 @@ int main(int argc, char* argv[])
 	FILE * fp264 = fopen("test264.h264","wb+");
 	FILE * fpyuv = fopen("testyuv.yuv","wb+");
 
+
+	//count frame num
 	frame_cnt=0;
 	while(av_read_frame(pFormatCtx, packet)>=0){
 		if(packet->stream_index==videoindex){
@@ -132,6 +147,7 @@ int main(int argc, char* argv[])
 			//fwrite(packet->data,1,packet->size,fl);
 			//fwrite(packet->data,1024,packet->size/1024,fp264); //may have some question ,result in error displaying not espected
 			fwrite(packet->data,1,packet->size,fp264);
+			fprintf(fp,"Packet Order Num: %d;Packsize: %d\r\n",frame_cnt,packet->size);
 			ret = avcodec_decode_video2(pCodecCtx, pFrame, &got_picture, packet);
 			if(ret < 0){
 				printf("Decode Error.\n");
@@ -150,15 +166,19 @@ int main(int argc, char* argv[])
 				fwrite(pFrameYUV->data[0],1,size,fpyuv);
 				fwrite(pFrameYUV->data[1],1,size/4,fpyuv);
 				fwrite(pFrameYUV->data[2],1,size/4,fpyuv);
+
+				fprintf(fp,"Is key_frame? %s; Frame type : %d\r\n",pFrame->key_frame ? "yes":"no",pFrame->pict_type);
+				
 				frame_cnt++;
 
 			}
+			fprintf(fp,"---------------\r\n");
 		}
 		av_free_packet(packet);
 	}
-
+	fclose(fp);
 	fclose(fp264);
-
+	fclose(fpyuv);
 	sws_freeContext(img_convert_ctx);
 
 	av_frame_free(&pFrameYUV);
