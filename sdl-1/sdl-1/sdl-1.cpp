@@ -14,6 +14,8 @@ extern "C"{
 
 
 int thread_exit = 0;
+
+//int i = 0;
 int refresh_video(void * opaque)
 {
 	thread_exit = 0;
@@ -22,6 +24,7 @@ int refresh_video(void * opaque)
 	{
 		SDL_Event event;
 		event.type = REFRESH_EVENT;
+		//printf("%d=================================>\n",i++);
 		SDL_PushEvent(&event);
 		SDL_Delay(40);
 	}
@@ -120,7 +123,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	while (1)
 	{
 		SDL_WaitEvent(&event);
-		printf("Event %x\n",event.type);
+		printf("%d************************\n",i++);
+		//printf("Event %x\n",event.type);
 		//fflush(stdout);
 		if(event.type == REFRESH_EVENT)
 		{
