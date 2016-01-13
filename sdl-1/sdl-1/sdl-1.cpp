@@ -2,12 +2,36 @@
 //
 
 #include "stdafx.h"
+//#include "stdlib.h"
 
 extern "C"{
 #include "SDL2/SDL.h"
 };
 
 
+#define REFRESH_EVENT (SDL_USEREVENT + 1)
+#define BREAK_EVENT (SDL_USEREVENT + 2)
+
+
+int thread_exit = 0;
+int refresh_video(void * opaque)
+{
+	thread_exit = 0;
+	
+	while(thread_exit == 0)
+	{
+		SDL_Event event;
+		event.type = REFRESH_EVENT;
+		SDL_PushEvent(&event);
+		SDL_Delay(40);
+	}
+	SDL_Event event;
+	thread_exit = 0;
+	event.type = BREAK_EVENT;
+	SDL_PushEvent(&event);
+
+	return 0;
+}
 /************************************************************************/
 /* 
 
@@ -90,9 +114,16 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	SDL_Rect rect;
 
-	
+	SDL_Event event;
+	SDL_Thread * thread = SDL_CreateThread(refresh_video,NULL,NULL);
+
 	while (1)
 	{
+		SDL_WaitEvent(&event);
+		printf("Event %x\n",event.type);
+		//fflush(stdout);
+		if(event.type == REFRESH_EVENT)
+		{
 		if(fread(buffer,1,one_frame_yuv_data,fpyuv) != one_frame_yuv_data)
 		{
 			//read the end and read again
@@ -116,10 +147,28 @@ int _tmain(int argc, _TCHAR* argv[])
 		*/
 		SDL_RenderCopy(render,txture,NULL,&rect);
 		SDL_RenderPresent(render);
-		SDL_Delay(40);
+			
+
+		}
+		else if(event.type ==SDL_WINDOWEVENT)
+		{
+			SDL_GetWindowSize(window,&window_w,&window_h);
+			printf("window width*height:%d*%d\n",window_w,window_h);
+			//fflush(stdout);
+		}
+		else if(event.type == SDL_QUIT)
+		{
+			thread_exit = 1;
+
+		}
+		else if(event.type == BREAK_EVENT)
+		{
+			break;
+		}
+		
 	}
 
-
+	SDL_Quit();
 	return 0;
 }
 
