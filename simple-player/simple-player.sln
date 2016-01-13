@@ -1,0 +1,20 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "simple-player", "simple-player\simple-player.vcxproj", "{94BCE150-C8C5-4E5E-97E7-08097929664E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{94BCE150-C8C5-4E5E-97E7-08097929664E}.Debug|Win32.ActiveCfg = Debug|Win32
+		{94BCE150-C8C5-4E5E-97E7-08097929664E}.Debug|Win32.Build.0 = Debug|Win32
+		{94BCE150-C8C5-4E5E-97E7-08097929664E}.Release|Win32.ActiveCfg = Release|Win32
+		{94BCE150-C8C5-4E5E-97E7-08097929664E}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
