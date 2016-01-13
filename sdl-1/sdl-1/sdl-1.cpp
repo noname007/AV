@@ -123,34 +123,34 @@ int _tmain(int argc, _TCHAR* argv[])
 	while (1)
 	{
 		SDL_WaitEvent(&event);
-		printf("%d************************\n",i++);
+		//printf("%d************************\n",i++);
 		//printf("Event %x\n",event.type);
 		//fflush(stdout);
 		if(event.type == REFRESH_EVENT)
 		{
-		if(fread(buffer,1,one_frame_yuv_data,fpyuv) != one_frame_yuv_data)
-		{
-			//read the end and read again
-			fseek(fpyuv,0,SEEK_SET);
-			fread(buffer,1,one_frame_yuv_data,fpyuv);
-		}
+			if(fread(buffer,1,one_frame_yuv_data,fpyuv) != one_frame_yuv_data)
+			{
+				//read the end and read again
+				fseek(fpyuv,0,SEEK_SET);
+				fread(buffer,1,one_frame_yuv_data,fpyuv);
+			}
 
-		/**
-		*更新纹理
-		* pix_w ？
-		*/
-		SDL_UpdateTexture(txture,NULL,buffer,pix_w);
-		rect.x =0;
-		rect.y =0;
-		rect.w = window_w;
-		rect.h = window_h;
+			/**
+			*更新纹理
+			* pix_w ？
+			*/
+			SDL_UpdateTexture(txture,NULL,buffer,pix_w);
+			rect.x =0;
+			rect.y =0;
+			rect.w = window_w;
+			rect.h = window_h;
 
-		SDL_RenderClear(render);
-		/**
-		*rect 告诉渲染器把纹理渲染到window的位置，以及在Window中的宽高
-		*/
-		SDL_RenderCopy(render,txture,NULL,&rect);
-		SDL_RenderPresent(render);
+			SDL_RenderClear(render);
+			/**
+			*rect 告诉渲染器把纹理渲染到window的位置，以及在Window中的宽高
+			*/
+			SDL_RenderCopy(render,txture,NULL,&rect);
+			SDL_RenderPresent(render);
 			
 
 		}
