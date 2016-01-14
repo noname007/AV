@@ -12,6 +12,64 @@ extern "C"
 };
 
 
+int display_video(void * a)
+{
+
+	return 0;
+}
+
+
+AVFormatContext * open_av_file(char * file)
+{
+	AVFormatContext	*pFormatCtx = avformat_alloc_context();
+
+	if(avformat_open_input(&pFormatCtx,file,NULL,NULL)!=0){
+		printf("Couldn't open input stream.\n");
+		return NULL;
+	}
+	if(avformat_find_stream_info(pFormatCtx,NULL)<0){
+		printf("Couldn't find stream information.\n");
+		return NULL;
+	}
+	return pFormatCtx;
+}
+
+
+int find_video_index(AVFormatContext * pFormatCtx)
+{
+
+	int videoindex=-1;
+
+	for(unsigned int i=0; i < pFormatCtx->nb_streams; i++) {
+		if(pFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO){
+			videoindex = i;
+			break;
+		}
+	}
+
+	return videoindex;
+}
+
+
+AVCodecContext * init_video_codec(AVFormatContext *pFormatCtx,int videoindex)
+{
+	AVCodecContext	*pCodecCtx;
+	AVCodec			*pCodec;
+
+	pCodecCtx=pFormatCtx->streams[videoindex]->codec;
+
+	pCodec=avcodec_find_decoder(pCodecCtx->codec_id);
+	if(pCodec==NULL){
+		printf("Codec not found.\n");
+		return NULL;
+	}
+	if(avcodec_open2(pCodecCtx, pCodec,NULL)<0){
+		printf("Could not open codec.\n");
+		return NULL;
+	}
+	return pCodecCtx;
+}
+
 int _tmain(int argc, char* argv[])
 {
 	AVFormatContext	*pFormatCtx;
@@ -27,44 +85,25 @@ int _tmain(int argc, char* argv[])
 
 	char filepath[]="Titanic.ts";
 
-	int frame_cnt;
 	av_register_all();
 	
-	pFormatCtx = avformat_alloc_context();
-
-	if(avformat_open_input(&pFormatCtx,filepath,NULL,NULL)!=0){
-		printf("Couldn't open input stream.\n");
+	pFormatCtx = open_av_file(filepath);
+	
+	if(pFormatCtx == NULL)
+	{
+		printf("openFile fail");
 		return -1;
 	}
-	if(avformat_find_stream_info(pFormatCtx,NULL)<0){
-		printf("Couldn't find stream information.\n");
-		return -1;
-	}
-	videoindex=-1;
 
-	for(unsigned int i=0; i < pFormatCtx->nb_streams; i++) {
-		if(pFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO){
-			videoindex = i;
-		}
-	}
 
-	if(videoindex==-1){
+	videoindex = find_video_index(pFormatCtx);
+	if(videoindex < 0){
 		printf("Didn't find a video stream.\n");
 		return -1;
 	}
 
-	pCodecCtx=pFormatCtx->streams[videoindex]->codec;
 
-	pCodec=avcodec_find_decoder(pCodecCtx->codec_id);
-	if(pCodec==NULL){
-		printf("Codec not found.\n");
-		return -1;
-	}
-	if(avcodec_open2(pCodecCtx, pCodec,NULL)<0){
-		printf("Could not open codec.\n");
-		return -1;
-	}
-
+	pCodecCtx = init_video_codec(pFormatCtx,videoindex);
 	
 
    	pFrame=av_frame_alloc();
@@ -108,7 +147,7 @@ int _tmain(int argc, char* argv[])
 
 	Uint32 pixformat = SDL_PIXELFORMAT_IYUV;
 	SDL_Texture *txture = SDL_CreateTexture(render,pixformat,SDL_TEXTUREACCESS_STREAMING,window_w,window_h);
-
+	SDL_Thread * thread = SDL_CreateThread(display_video,NULL,NULL);
 
 	while(av_read_frame(pFormatCtx, packet)>=0){
 		if(packet->stream_index==videoindex){
