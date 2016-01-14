@@ -110,26 +110,27 @@ int _tmain(int argc, char* argv[])
 	SDL_Texture *txture = SDL_CreateTexture(render,pixformat,SDL_TEXTUREACCESS_STREAMING,window_w,window_h);
 
 
-		while(av_read_frame(pFormatCtx, packet)>=0){
-			if(packet->stream_index==videoindex){
-				ret = avcodec_decode_video2(pCodecCtx, pFrame, &got_picture, packet);
-				if(ret < 0){
-					printf("Decode Error.\n");
-					return -1;
-				}
-				if(got_picture){
-					//sws_scale(img_convert_ctx, (const uint8_t* const*)pFrame->data, pFrame->linesize, 0, pCodecCtx->height,pFrameYUV->data, pFrameYUV->linesize);
-					sws_scale(img_convert_ctx, (const uint8_t* const*)pFrame->data, pFrame->linesize, 0, pCodecCtx->height, pFrameYUV->data, pFrameYUV->linesize);
-					//SDL_UpdateTexture(txture,NULL,pFrameYUV->data[0], pFrame->linesize[0]);  ---->bug pFrame not eq pframeYUV
-					SDL_UpdateTexture(txture,NULL,pFrameYUV->data[0], pFrameYUV->linesize[0]);
-					SDL_RenderClear(render);
-					SDL_RenderCopy(render,txture,NULL,NULL);
-					SDL_RenderPresent(render);
-					SDL_Delay(40);
-
-				}
+	while(av_read_frame(pFormatCtx, packet)>=0){
+		if(packet->stream_index==videoindex){
+			ret = avcodec_decode_video2(pCodecCtx, pFrame, &got_picture, packet);
+				
+			if(ret < 0){
+				printf("Decode Error.\n");
+				return -1;
 			}
-			av_free_packet(packet);	
+
+			if(got_picture){
+				sws_scale(img_convert_ctx, (const uint8_t* const*)pFrame->data, pFrame->linesize, 0, pCodecCtx->height, pFrameYUV->data, pFrameYUV->linesize);
+				//SDL_UpdateTexture(txture,NULL,pFrameYUV->data[0], pFrame->linesize[0]);  ---->bug pFrame not eq pframeYUV
+				SDL_UpdateTexture(txture,NULL,pFrameYUV->data[0], pFrameYUV->linesize[0]);
+				SDL_RenderClear(render);
+				SDL_RenderCopy(render,txture,NULL,NULL);
+				SDL_RenderPresent(render);
+				SDL_Delay(40);
+
+			}
+		}
+		av_free_packet(packet);	
 	}
 	
 
