@@ -199,3 +199,6 @@ FakesAssemblies/
 *.yuv
 *.yuv
 *.yuv
+*.mp3
+*.pcm
+*.ts
