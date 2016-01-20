@@ -1,4 +1,4 @@
-#include "stdafx.h"
+ï»¿#include "stdafx.h"
 #include <stdio.h>
 
 #define __STDC_CONSTANT_MACROS
@@ -12,11 +12,13 @@ extern "C"
 };
 
 
-int display_video(void * a)
-{
+#define SFM_REFRESH_EVENT  (SDL_USEREVENT + 1)
+#define SFM_BREAK_EVENT  (SDL_USEREVENT + 2)
 
-	return 0;
-}
+int thread_exit =0;
+
+
+
 
 
 AVFormatContext * open_av_file(char * file)
@@ -70,63 +72,36 @@ AVCodecContext * init_video_codec(AVFormatContext *pFormatCtx,int videoindex)
 	return pCodecCtx;
 }
 
-int _tmain(int argc, char* argv[])
+typedef struct {
+	AVCodecContext *pCodecCtx;
+	AVPacket * packet;
+}Passed_t;
+
+
+int diaplay_video_thread(void * opaque)
 {
-	AVFormatContext	*pFormatCtx;
-	int				 videoindex;
-	AVCodecContext	*pCodecCtx;
-	AVCodec			*pCodec;
-	AVFrame	*pFrame,*pFrameYUV;
-	uint8_t *out_buffer;
-	AVPacket *packet;
-
-	int ret, got_picture;
-	struct SwsContext *img_convert_ctx;
-
-	char filepath[]="Titanic.ts";
-
-	av_register_all();
+	Passed_t *data = (Passed_t *) opaque;
 	
-	pFormatCtx = open_av_file(filepath);
-	
-	if(pFormatCtx == NULL)
-	{
-		printf("openFile fail");
-		return -1;
-	}
-
-
-	videoindex = find_video_index(pFormatCtx);
-	if(videoindex < 0){
-		printf("Didn't find a video stream.\n");
-		return -1;
-	}
-
-
-	pCodecCtx = init_video_codec(pFormatCtx,videoindex);
-	
-
-   	pFrame=av_frame_alloc();
-	pFrameYUV=av_frame_alloc();
-	out_buffer=(uint8_t *)av_malloc(avpicture_get_size(PIX_FMT_YUV420P, pCodecCtx->width, pCodecCtx->height));
-	avpicture_fill((AVPicture *)pFrameYUV, out_buffer, PIX_FMT_YUV420P, pCodecCtx->width, pCodecCtx->height);
-	packet=(AVPacket *)av_malloc(sizeof(AVPacket));
-
-	
-	img_convert_ctx = sws_getContext(pCodecCtx->width, pCodecCtx->height, pCodecCtx->pix_fmt, 
-		pCodecCtx->width, pCodecCtx->height, PIX_FMT_YUV420P, SWS_BICUBIC, NULL, NULL, NULL); 
-
-
-	//======================SDLINIT
-
-
-	int one_frame_yuv_data = 0;
+	AVPacket *packet = data->packet;
+	AVCodecContext * pCodecCtx = data->pCodecCtx;
 
 	int window_w = pCodecCtx->width;
 	int window_h = pCodecCtx->height;
-	/**
-	*SDL_Init³õÊ¼»¯
-	*/
+	
+	AVFrame	*pFrame,*pFrameYUV;
+	uint8_t *out_buffer;
+
+	pFrame=av_frame_alloc();
+	pFrameYUV=av_frame_alloc();
+	out_buffer=(uint8_t *)av_malloc(avpicture_get_size(PIX_FMT_YUV420P, pCodecCtx->width, pCodecCtx->height));
+	avpicture_fill((AVPicture *)pFrameYUV, out_buffer, PIX_FMT_YUV420P, pCodecCtx->width, pCodecCtx->height);
+
+
+	struct SwsContext * img_convert_ctx = sws_getContext(pCodecCtx->width, pCodecCtx->height, pCodecCtx->pix_fmt, 
+		pCodecCtx->width, pCodecCtx->height, PIX_FMT_YUV420P, SWS_BICUBIC, NULL, NULL, NULL); 
+
+	//===sdl
+
 	if(SDL_Init(SDL_INIT_VIDEO))
 	{
 		printf("ERROR -%s",SDL_GetError());
@@ -147,38 +122,105 @@ int _tmain(int argc, char* argv[])
 
 	Uint32 pixformat = SDL_PIXELFORMAT_IYUV;
 	SDL_Texture *txture = SDL_CreateTexture(render,pixformat,SDL_TEXTUREACCESS_STREAMING,window_w,window_h);
-	SDL_Thread * thread = SDL_CreateThread(display_video,NULL,NULL);
 
-	while(av_read_frame(pFormatCtx, packet)>=0){
-		if(packet->stream_index==videoindex){
-			ret = avcodec_decode_video2(pCodecCtx, pFrame, &got_picture, packet);
-				
-			if(ret < 0){
-				printf("Decode Error.\n");
-				return -1;
-			}
 
-			if(got_picture){
-				sws_scale(img_convert_ctx, (const uint8_t* const*)pFrame->data, pFrame->linesize, 0, pCodecCtx->height, pFrameYUV->data, pFrameYUV->linesize);
-				//SDL_UpdateTexture(txture,NULL,pFrameYUV->data[0], pFrame->linesize[0]);  ---->bug pFrame not eq pframeYUV
-				SDL_UpdateTexture(txture,NULL,pFrameYUV->data[0], pFrameYUV->linesize[0]);
-				SDL_RenderClear(render);
-				SDL_RenderCopy(render,txture,NULL,NULL);
-				SDL_RenderPresent(render);
-				SDL_Delay(40);
 
-			}
+	int ret, got_picture;
+	SDL_Event event;
+	while(1)
+	{
+		SDL_WaitEvent(&event);
+		if(event.type != SFM_REFRESH_EVENT)
+		{
+
+			continue;
 		}
-		av_free_packet(packet);	
+
+		ret = avcodec_decode_video2(pCodecCtx, pFrame, &got_picture, packet);
+		if(ret < 0){
+			printf("Decode Error.\n");
+			return -1;
+		}
+		if(got_picture){
+			sws_scale(img_convert_ctx, (const uint8_t* const*)pFrame->data, pFrame->linesize, 0, pCodecCtx->height, pFrameYUV->data, pFrameYUV->linesize);
+
+			SDL_UpdateTexture( txture, NULL, pFrameYUV->data[0], pFrameYUV->linesize[0] );  
+			SDL_RenderClear( render );  
+			SDL_RenderCopy( render, txture, NULL, NULL);  
+			SDL_RenderPresent( render );  
+			SDL_Delay(40);
+		}
+		
 	}
-	
+
 
 	sws_freeContext(img_convert_ctx);
+	av_frame_free(&pFrameYUV);
+	av_frame_free(&pFrame);
+
+	return 0;
+}
+
+
+int _tmain(int argc, char* argv[])
+{
+
+	AVFormatContext	*pFormatCtx;
+	int				 videoindex;
+	AVCodecContext	*pCodecCtx;
+	AVCodec			*pCodec;
+
+	AVPacket *packet;
+
+	
+
+	char filepath[]="Titanic.ts";
+
+	av_register_all();
+
+	pFormatCtx = open_av_file(filepath);
+
+	if(pFormatCtx == NULL)
+	{
+		printf("openFile fail");
+		return -1;
+	}
+
+
+	videoindex = find_video_index(pFormatCtx);
+	if(videoindex < 0){
+		printf("Didn't find a video stream.\n");
+		return -1;
+	}
+
+
+	pCodecCtx = init_video_codec(pFormatCtx,videoindex);
+
+
+	
+	packet=(AVPacket *)av_malloc(sizeof(AVPacket));
+
+
+	Passed_t data = {pCodecCtx,packet};
+
+	SDL_Thread  *video = SDL_CreateThread(diaplay_video_thread,"yangzz_display_video",&data);
+	SDL_Event event;
+	while(av_read_frame(pFormatCtx, packet)>=0)
+	{
+		if(packet->stream_index==videoindex){
+			event.type = SFM_REFRESH_EVENT;
+			SDL_PushEvent(&event);
+			av_free_packet(packet);
+		}
+	}
+
+	thread_exit = 1;
+	
+	//SDL_WaitThread();
 
 	SDL_Quit();
 
-	av_frame_free(&pFrameYUV);
-	av_frame_free(&pFrame);
+
 	avcodec_close(pCodecCtx);
 	avformat_close_input(&pFormatCtx);
 
