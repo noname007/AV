@@ -7,6 +7,13 @@
 #include "mfc-avDlg.h"
 #include "afxdialogex.h"
 
+extern "C"{
+#include "libavcodec/avcodec.h"
+#include "libavformat/avformat.h"
+#include "libswscale/swscale.h"
+//#include "SDL2/SDL.h"
+};
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -57,12 +64,16 @@ CmfcavDlg::CmfcavDlg(CWnd* pParent /*=NULL*/)
 void CmfcavDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
+	DDX_Control(pDX, AV_URL, m_url);
 }
 
 BEGIN_MESSAGE_MAP(CmfcavDlg, CDialogEx)
 	ON_WM_SYSCOMMAND()
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
+	ON_BN_CLICKED(AV_URL, &CmfcavDlg::OnBnClickedButton5)
+	ON_BN_CLICKED(AV_OPEN_FILE, &CmfcavDlg::OnBnClickedOpenFile)
+	ON_BN_CLICKED(IDOK, &CmfcavDlg::OnBnClickedOk)
 END_MESSAGE_MAP()
 
 
@@ -151,3 +162,25 @@ HCURSOR CmfcavDlg::OnQueryDragIcon()
 	return static_cast<HCURSOR>(m_hIcon);
 }
 
+
+
+void CmfcavDlg::OnBnClickedButton5()
+{
+	// TODO: 在此添加控件通知处理程序代码
+}
+
+
+void CmfcavDlg::OnBnClickedOpenFile()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	CString str1;
+	str1.Format("%s",avcodec_configuration());
+	AfxMessageBox(str1);
+}
+
+
+void CmfcavDlg::OnBnClickedOk()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	CDialogEx::OnOK();
+}

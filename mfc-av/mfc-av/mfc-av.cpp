@@ -6,6 +6,12 @@
 #include "mfc-av.h"
 #include "mfc-avDlg.h"
 
+
+
+
+
+
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
